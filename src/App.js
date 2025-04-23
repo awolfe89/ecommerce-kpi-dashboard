@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import auth from './config/netlifyAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import netlifyIdentity from 'netlify-identity-widget';
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,6 +27,13 @@ const App = () => {
       document.removeEventListener('netlify-identity-login', onLogin);
       document.removeEventListener('netlify-identity-logout', onLogout);
     };
+  }, []);
+  useEffect(() => {
+    console.log("Netlify Identity Status:", {
+      initialized: netlifyIdentity && typeof netlifyIdentity.open === 'function',
+      currentUser: netlifyIdentity.currentUser(),
+      APIUrl: netlifyIdentity.store && netlifyIdentity.store.user && netlifyIdentity.store.user.api && netlifyIdentity.store.user.api.apiURL
+    });
   }, []);
   
   const handleLogin = () => {

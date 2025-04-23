@@ -1,11 +1,29 @@
 // src/config/netlifyAuth.js
 import netlifyIdentity from 'netlify-identity-widget';
 
-// Initialize Netlify Identity
-netlifyIdentity.init({
-  container: '#netlify-modal', // defaults to body
-  locale: 'en' // defaults to 'en'
-});
+// Create a function to safely initialize after document is ready
+const initializeIdentity = () => {
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    netlifyIdentity.init({
+      container: '#netlify-modal', // This will create the modal if it doesn't exist
+      APIOpts: {
+        APIUrl: '/.netlify/identity'
+      }
+    });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      netlifyIdentity.init({
+        container: '#netlify-modal',
+        APIOpts: {
+          APIUrl: '/.netlify/identity'
+        }
+      });
+    });
+  }
+};
+
+// Initialize safely
+initializeIdentity();
 
 export const auth = {
   // Current user state
