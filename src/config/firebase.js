@@ -1,4 +1,4 @@
-// src/config/firebase.js
+// src/config/firebase.js - Temporary version for migration
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
@@ -17,3 +17,8 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore
 export const db = getFirestore(app);
+
+// Temporary auth stub to prevent build errors
+export const auth = {
+  currentUser: null
+};
