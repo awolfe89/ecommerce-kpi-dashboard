@@ -132,7 +132,7 @@ const Dashboard = ({ onLogout }) => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      auth.logout();
       onLogout();
     } catch (error) {
       console.error("Error signing out: ", error);

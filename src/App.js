@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './config/firebase';
+import auth from './config/netlifyAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
@@ -10,13 +9,23 @@ const App = () => {
   
   // Check authentication state when the app loads
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoggedIn(!!user);
-      setLoading(false);
-    });
+    const user = auth.getCurrentUser();
+    setIsLoggedIn(!!user);
+    setLoading(false);
     
-    // Clean up subscription
-    return () => unsubscribe();
+    // Setup listeners for login/logout
+    const onLogin = () => setIsLoggedIn(true);
+    const onLogout = () => setIsLoggedIn(false);
+    
+    // Add event listeners
+    document.addEventListener('netlify-identity-login', onLogin);
+    document.addEventListener('netlify-identity-logout', onLogout);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('netlify-identity-login', onLogin);
+      document.removeEventListener('netlify-identity-logout', onLogout);
+    };
   }, []);
   
   const handleLogin = () => {
@@ -24,6 +33,7 @@ const App = () => {
   };
   
   const handleLogout = () => {
+    auth.logout();
     setIsLoggedIn(false);
   };
   

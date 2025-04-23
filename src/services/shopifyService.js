@@ -1,27 +1,14 @@
 // src/services/shopifyService.js
+import auth from '../config/netlifyAuth';
 
 /**
- * Service to fetch data from Shopify Admin API via proxy
+ * Service to fetch data from Shopify Admin API via Netlify Functions proxy
  */
 class ShopifyService {
   constructor() {
-    this.apiKey = process.env.REACT_APP_SHOPIFY_API_KEY;
-    this.apiToken = process.env.REACT_APP_SHOPIFY_API_TOKEN;
-    this.defaultShopDomain = process.env.REACT_APP_SHOPIFY_DOMAIN;
-    this.apiVersion = '2023-10'; // Update to the version you want to use
-    this.proxyUrl = process.env.REACT_APP_PROXY_URL || 'http://localhost:4000/api/shopify';
-    
-    // Configure domains for multiple Shopify stores
-    this.shopDomains = {
-      'website2': process.env.REACT_APP_SHOPIFY_DOMAIN, // GrubsBootsUSA
-      'website3': process.env.REACT_APP_SHOPIFY_DOMAIN_2 // Your new website
-    };
-    
-    // Configure API tokens for multiple Shopify stores
-    this.apiTokens = {
-      'website2': process.env.REACT_APP_SHOPIFY_API_TOKEN, // GrubsBootsUSA
-      'website3': process.env.REACT_APP_SHOPIFY_API_TOKEN_2 // Your new website
-    };
+    // Updated to use Netlify Functions
+    this.proxyUrl = '/.netlify/functions/shopify-proxy';
+    this.apiVersion = '2023-10';
   }
 
   /**
@@ -56,25 +43,20 @@ class ShopifyService {
   }
 
   /**
-   * Get the shop domain for the specified website
-   * @param {string} websiteId - The website identifier 
-   * @returns {string} - The Shopify domain
+   * Get the current user's authentication token from Netlify Identity
+   * @returns {Promise<string>} - The auth token
    */
-  getShopDomain(websiteId) {
-    return this.shopDomains[websiteId] || this.defaultShopDomain;
-  }
-  
-  /**
-   * Get the API token for the specified website
-   * @param {string} websiteId - The website identifier
-   * @returns {string} - The API token
-   */
-  getApiToken(websiteId) {
-    return this.apiTokens[websiteId] || this.apiToken;
+  async getAuthToken() {
+    const currentUser = auth.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+    
+    return currentUser.token.access_token;
   }
 
   /**
-   * Make a request to Shopify API via proxy
+   * Make a request to Shopify API via Netlify Functions proxy
    * @param {string} endpoint - API endpoint path
    * @param {Object} options - Request options
    * @returns {Promise<Object>} - Response data
@@ -82,22 +64,35 @@ class ShopifyService {
   async makeProxyRequest(endpoint, options = {}) {
     try {
       const websiteId = options.websiteId || 'website2'; // Default to website2 (GrubsBootsUSA)
-      const shopDomain = this.getShopDomain(websiteId);
-      const accessToken = this.getApiToken(websiteId);
       
-      console.log(`Making proxy request to ${endpoint} for ${websiteId} (${shopDomain})`);
+      // Get auth token from Netlify Identity
+      const token = await this.getAuthToken();
+      
+      console.log(`Making proxy request to ${endpoint} for ${websiteId}`);
+      
+      // Determine which Shopify domain/token to use based on websiteId
+      let shopDomain, accessToken;
+      if (websiteId === 'website3') {
+        shopDomain = process.env.REACT_APP_SHOPIFY_DOMAIN_2;
+        accessToken = process.env.REACT_APP_SHOPIFY_API_TOKEN_2;
+      } else {
+        // Default to website2 (GrubsBootsUSA)
+        shopDomain = process.env.REACT_APP_SHOPIFY_DOMAIN;
+        accessToken = process.env.REACT_APP_SHOPIFY_API_TOKEN;
+      }
       
       const response = await fetch(this.proxyUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           endpoint,
           method: options.method || 'GET',
-          shopDomain: shopDomain,
+          shopDomain,
           apiVersion: this.apiVersion,
-          accessToken: accessToken,
+          accessToken,
           queryParams: options.queryParams || {},
           body: options.body || null
         })

@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+  
+[build.environment]
+  # Add any environment variables needed for the build here
+  REACT_APP_BACKEND_URL = "https://armor-web-kpi.firebaseio.com"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  command = "npm start"
+  port = 3000
+  publish = "build"
+
+# Enable Netlify Identity
+[template.environment]
+  NETLIFY_IDENTITY_ENABLED = "true"
