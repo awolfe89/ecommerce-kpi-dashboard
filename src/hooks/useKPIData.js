@@ -1,10 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import shopifyService from '../services/shopifyService';
+import auth from '../config/netlifyAuth';
 
-// This is the list of websites that use Shopify
+// List of websites that use Shopify
 const shopifyWebsites = ['website2', 'website3']; // Add more IDs as needed
+
+// Firebase proxy service
+const firebaseProxy = {
+  async callFunction(action, collection, options = {}) {
+    try {
+      const user = auth.getCurrentUser();
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+      
+      const token = await auth.getAuthToken();
+      
+      const response = await fetch('/.netlify/functions/firebase-proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action,
+          collection,
+          document: options.document || null,
+          data: options.data || null,
+          query: options.query || null
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Firebase proxy error: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Firebase proxy error:', error);
+      throw error;
+    }
+  },
+  
+  // Helper methods
+  async getDocuments(collection, query) {
+    return await this.callFunction('get', collection, { query });
+  },
+  
+  async addDocument(collection, data) {
+    return await this.callFunction('add', collection, { data });
+  },
+  
+  async updateDocument(collection, document, data) {
+    return await this.callFunction('update', collection, { document, data });
+  },
+  
+  async deleteDocument(collection, document) {
+    return await this.callFunction('delete', collection, { document });
+  }
+};
+
+// Import shopify service
+import shopifyService from '../services/shopifyService';
 
 const useKPIData = (selectedYear, selectedWebsite) => {
   const [data, setData] = useState([]);
@@ -28,33 +84,20 @@ const useKPIData = (selectedYear, selectedWebsite) => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Create queries that filter by website and year
-      const currentYearQuery = query(
-        collection(db, 'kpiData'),
-        where('website', '==', selectedWebsite),
-        where('year', '==', selectedYear)
-      );
+      // Query through Firebase proxy
+      const currentYearResult = await firebaseProxy.getDocuments('kpiData', [
+        { field: 'website', operation: '==', value: selectedWebsite },
+        { field: 'year', operation: '==', value: selectedYear }
+      ]);
       
-      const prevYearQuery = query(
-        collection(db, 'kpiData'),
-        where('website', '==', selectedWebsite),
-        where('year', '==', selectedYear - 1)
-      );
+      const prevYearResult = await firebaseProxy.getDocuments('kpiData', [
+        { field: 'website', operation: '==', value: selectedWebsite },
+        { field: 'year', operation: '==', value: selectedYear - 1 }
+      ]);
       
-      // Execute the queries
-      const currentYearSnapshot = await getDocs(currentYearQuery);
-      const prevYearSnapshot = await getDocs(prevYearQuery);
-      
-      const currentYearData = [];
-      const previousYearData = [];
-      
-      currentYearSnapshot.forEach((doc) => {
-        currentYearData.push({ id: doc.id, ...doc.data() });
-      });
-      
-      prevYearSnapshot.forEach((doc) => {
-        previousYearData.push({ id: doc.id, ...doc.data() });
-      });
+      // Process results
+      const currentYearData = currentYearResult.docs || [];
+      const previousYearData = prevYearResult.docs || [];
       
       // Sort data by month
       currentYearData.sort((a, b) => a.month - b.month);
@@ -88,15 +131,15 @@ const useKPIData = (selectedYear, selectedWebsite) => {
       };
       
       if (kpiData.id) {
-        await updateDoc(doc(db, 'kpiData', kpiData.id), dataWithWebsite);
+        await firebaseProxy.updateDocument('kpiData', kpiData.id, dataWithWebsite);
       } else {
         // Check if data for this month, year, and website already exists
         const existingEntry = data.find(item => item.month === kpiData.month);
         
         if (existingEntry) {
-          await updateDoc(doc(db, 'kpiData', existingEntry.id), dataWithWebsite);
+          await firebaseProxy.updateDocument('kpiData', existingEntry.id, dataWithWebsite);
         } else {
-          await addDoc(collection(db, 'kpiData'), dataWithWebsite);
+          await firebaseProxy.addDocument('kpiData', dataWithWebsite);
         }
       }
       
@@ -112,7 +155,7 @@ const useKPIData = (selectedYear, selectedWebsite) => {
 
   const handleDeleteKPI = async (id) => {
     try {
-      await deleteDoc(doc(db, 'kpiData', id));
+      await firebaseProxy.deleteDocument('kpiData', id);
       fetchData();
       return true;
     } catch (error) {
@@ -145,10 +188,10 @@ const useKPIData = (selectedYear, selectedWebsite) => {
       
       if (existingEntry) {
         // Update existing record
-        await updateDoc(doc(db, 'kpiData', existingEntry.id), kpiData);
+        await firebaseProxy.updateDocument('kpiData', existingEntry.id, kpiData);
       } else {
         // Create new record
-        await addDoc(collection(db, 'kpiData'), kpiData);
+        await firebaseProxy.addDocument('kpiData', kpiData);
       }
       
       return true;
