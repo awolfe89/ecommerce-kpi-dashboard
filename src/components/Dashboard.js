@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import auth from '../config/netlifyAuth';
 import DashboardLayout from './layout/DashboardLayout';
 import WebsiteSelector from './WebsiteSelector';
 import MonthlyDashboard from './tabs/MonthlyDashboard';
