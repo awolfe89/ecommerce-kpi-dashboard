@@ -7,6 +7,7 @@ import MultiYearAnalysis from './tabs/MultiYearAnalysis';
 import DataManagement from './tabs/DataManagement';
 import ShopifyTestComponent from './ShopifyTestComponent'; // Import the test component
 import useKPIData from '../hooks/useKPIData';
+
 import { calculateAverageMonthSales, forecastYearlySales, prepareChartData } from '../utils/dataCalculations';
 
 // Constants
@@ -200,6 +201,9 @@ const Dashboard = ({ onLogout }) => {
             websiteName={websites.find(w => w.id === selectedWebsite)?.name}
             isShopifyWebsite={isShopifyWebsite}
             syncAllShopifyData={syncAllShopifyData}
+            data={data}
+            prevYearData={prevYearData}
+            selectedYear={selectedYear}
           />
         </>
       )}

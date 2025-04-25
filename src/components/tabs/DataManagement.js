@@ -4,6 +4,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import KPIDataForm from '../KPIDataForm';
 import KPIDataTable from '../KPIDataTable';
 import ShopifyConfig from '../ShopifyConfig';
+import ReportButton from '../ReportButton';
 
 const DataManagement = ({
   isEditing,
@@ -20,7 +21,11 @@ const DataManagement = ({
   selectedWebsite,
   isShopifyWebsite,
   syncAllShopifyData,
-  syncingData
+  syncingData,
+  // Add these new props for report generation
+  data,
+  prevYearData,
+  selectedYear
 }) => {
   const { darkMode } = useContext(ThemeContext);
   
@@ -30,12 +35,24 @@ const DataManagement = ({
         <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
           {websiteName} - Monthly KPI Data
         </h2>
-        <button 
-          onClick={() => setIsEditing(!isEditing)}
-          className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          {isEditing ? 'Cancel' : 'Add/Edit Data'}
-        </button>
+        <div className="flex space-x-2">
+          <button 
+            onClick={() => setIsEditing(!isEditing)}
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
+            {isEditing ? 'Cancel' : 'Add/Edit Data'}
+          </button>
+          
+          {/* Report Generation Button */}
+          <ReportButton
+            selectedWebsite={selectedWebsite}
+            websiteName={websiteName}
+            selectedYear={selectedYear}
+            data={data}
+            prevYearData={prevYearData}
+            requirePassword={true}
+          />
+        </div>
       </div>
       
       {/* Shopify Integration Section */}
@@ -52,8 +69,7 @@ const DataManagement = ({
           currentKPI={currentKPI} 
           setCurrentKPI={setCurrentKPI} 
           handleAddKPI={handleAddKPI} 
-          monthNames={monthNames} 
-          darkMode={darkMode}
+          monthNames={monthNames}
         />
       )}
       
@@ -63,8 +79,7 @@ const DataManagement = ({
         salesComparisonData={combinedData} 
         monthNames={monthNames} 
         handleEditKPI={handleEditKPI} 
-        handleDeleteKPI={handleDeleteKPI} 
-        darkMode={darkMode}
+        handleDeleteKPI={handleDeleteKPI}
       />
     </div>
   );
