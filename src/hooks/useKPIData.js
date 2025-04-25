@@ -1,66 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import auth from '../config/netlifyAuth';
-
-// List of websites that use Shopify
-const shopifyWebsites = ['website2', 'website3']; // Add more IDs as needed
-
-// Firebase proxy service
-const firebaseProxy = {
-  async callFunction(action, collection, options = {}) {
-    try {
-      const user = auth.getCurrentUser();
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-      
-      const token = await auth.getAuthToken();
-      
-      const response = await fetch('/.netlify/functions/firebase-proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action,
-          collection,
-          document: options.document || null,
-          data: options.data || null,
-          query: options.query || null
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Firebase proxy error: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Firebase proxy error:', error);
-      throw error;
-    }
-  },
-  
-  // Helper methods
-  async getDocuments(collection, query) {
-    return await this.callFunction('get', collection, { query });
-  },
-  
-  async addDocument(collection, data) {
-    return await this.callFunction('add', collection, { data });
-  },
-  
-  async updateDocument(collection, document, data) {
-    return await this.callFunction('update', collection, { document, data });
-  },
-  
-  async deleteDocument(collection, document) {
-    return await this.callFunction('delete', collection, { document });
-  }
-};
-
-// Import shopify service
+import firebaseProxy from '../services/firebaseProxy';
 import shopifyService from '../services/shopifyService';
+
+// This is the list of websites that use Shopify
+const shopifyWebsites = ['website2', 'website3']; // Add more IDs as needed
 
 const useKPIData = (selectedYear, selectedWebsite) => {
   const [data, setData] = useState([]);
