@@ -1,23 +1,23 @@
 export const validateEnv = () => {
   const requiredEnvVars = [
-    'REACT_APP_FIREBASE_API_KEY',
-    'REACT_APP_FIREBASE_AUTH_DOMAIN',
-    'REACT_APP_FIREBASE_PROJECT_ID',
-    'REACT_APP_FIREBASE_STORAGE_BUCKET',
-    'REACT_APP_FIREBASE_MESSAGING_SENDER_ID',
-    'REACT_APP_FIREBASE_APP_ID',
+    'FIREBASE_API_KEY',
+    'FIREBASE_AUTH_DOMAIN',
+    'FIREBASE_PROJECT_ID',
+    'FIREBASE_STORAGE_BUCKET',
+    'FIREBASE_MESSAGING_SENDER_ID',
+    'FIREBASE_APP_ID',
     // Optional - they have default fallbacks in the code
-    // 'REACT_APP_ADMIN_USERNAME',
-    // 'REACT_APP_ADMIN_PASSWORD',
-    // 'REACT_APP_FIREBASE_ADMIN_EMAIL',
-    // 'REACT_APP_FIREBASE_ADMIN_PASSWORD'
+    // 'ADMIN_USERNAME',
+    // 'ADMIN_PASSWORD',
+    // 'FIREBASE_ADMIN_EMAIL',
+    // 'FIREBASE_ADMIN_PASSWORD'
   ];
   
   // Shopify environment variables are only required if using Shopify integration
   const shopifyEnvVars = [
-    'REACT_APP_SHOPIFY_API_KEY',
-    'REACT_APP_SHOPIFY_API_TOKEN',
-    'REACT_APP_SHOPIFY_DOMAIN'
+    'SHOPIFY_API_KEY',
+    'SHOPIFY_API_TOKEN',
+    'SHOPIFY_DOMAIN'
   ];
   
   const missingEnvVars = requiredEnvVars.filter(env => !process.env[env]);

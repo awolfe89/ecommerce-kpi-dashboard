@@ -10,8 +10,8 @@ const ShopifyConfig = ({ selectedWebsite, isShopifyWebsite, syncAllShopifyData, 
   
   // Get the domain for the selected website
   const shopDomain = selectedWebsite === 'website2' 
-    ? process.env.REACT_APP_SHOPIFY_DOMAIN 
-    : process.env.REACT_APP_SHOPIFY_DOMAIN_2;
+    ? process.env.SHOPIFY_DOMAIN 
+    : process.env.SHOPIFY_DOMAIN_2;
   
   // Check connection status when component mounts or website changes
   useEffect(() => {

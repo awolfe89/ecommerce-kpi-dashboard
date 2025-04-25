@@ -73,12 +73,12 @@ class ShopifyService {
       // Determine which Shopify domain/token to use based on websiteId
       let shopDomain, accessToken;
       if (websiteId === 'website3') {
-        shopDomain = process.env.REACT_APP_SHOPIFY_DOMAIN_2;
-        accessToken = process.env.REACT_APP_SHOPIFY_API_TOKEN_2;
+        shopDomain = process.env.SHOPIFY_DOMAIN_2;
+        accessToken = process.env.SHOPIFY_API_TOKEN_2;
       } else {
         // Default to website2 (GrubsBootsUSA)
-        shopDomain = process.env.REACT_APP_SHOPIFY_DOMAIN;
-        accessToken = process.env.REACT_APP_SHOPIFY_API_TOKEN;
+        shopDomain = process.env.SHOPIFY_DOMAIN;
+        accessToken = process.env.SHOPIFY_API_TOKEN;
       }
       
       const response = await fetch(this.proxyUrl, {

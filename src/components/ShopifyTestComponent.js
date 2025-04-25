@@ -24,9 +24,9 @@ const ShopifyTestComponent = () => {
         body: JSON.stringify({
           endpoint: 'shop.json',
           method: 'GET',
-          shopDomain: process.env.REACT_APP_SHOPIFY_DOMAIN,
+          shopDomain: process.env.SHOPIFY_DOMAIN,
           apiVersion: '2023-10',
-          accessToken: process.env.REACT_APP_SHOPIFY_API_TOKEN
+          accessToken: process.env.SHOPIFY_API_TOKEN
         })
       });
 
@@ -71,9 +71,9 @@ const ShopifyTestComponent = () => {
         body: JSON.stringify({
           endpoint: 'orders.json',
           method: 'GET',
-          shopDomain: process.env.REACT_APP_SHOPIFY_DOMAIN,
+          shopDomain: process.env.SHOPIFY_DOMAIN,
           apiVersion: '2023-10',
-          accessToken: process.env.REACT_APP_SHOPIFY_API_TOKEN,
+          accessToken: process.env.SHOPIFY_API_TOKEN,
           queryParams: {
             status: 'any',
             created_at_min: formatDate(startDate),
