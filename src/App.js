@@ -3,7 +3,7 @@ import auth from './config/netlifyAuth';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import netlifyIdentity from 'netlify-identity-widget';
-import { initializeFirebase } from './config/firebase';
+
 
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -36,28 +36,6 @@ const App = () => {
       APIUrl: netlifyIdentity.store && netlifyIdentity.store.user && netlifyIdentity.store.user.api && netlifyIdentity.store.user.api.apiURL
     });
   }, []);
-    
-  useEffect(() => {
-    // Initialize Firebase when the app loads
-    initializeFirebase()
-      .then(() => {
-        console.log('Firebase initialized successfully');
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to initialize Firebase:', err);
-        setError('Failed to initialize application. Please try again later.');
-        setLoading(false);
-      });
-  }, []);
-  
-  if (loading) {
-    return <div>Loading application...</div>;
-  }
-  
-  if (error) {
-    return <div>{error}</div>;
-  }
   
   const handleLogin = () => {
     setIsLoggedIn(true);
