@@ -10,7 +10,7 @@ const ReportButton = ({
   data, 
   prevYearData,
   requirePassword = true,
-  reportPassword = 'analyzer2025' // Default password, should be configured in .env
+  reportPassword = process.env.REPORT_PASSWORD // Default password, should be configured in .env
 }) => {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
