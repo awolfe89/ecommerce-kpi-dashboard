@@ -6,11 +6,7 @@ export const validateEnv = () => {
     'FIREBASE_STORAGE_BUCKET',
     'FIREBASE_MESSAGING_SENDER_ID',
     'FIREBASE_APP_ID',
-    // Optional - they have default fallbacks in the code
-    // 'ADMIN_USERNAME',
-    // 'ADMIN_PASSWORD',
-    // 'FIREBASE_ADMIN_EMAIL',
-    // 'FIREBASE_ADMIN_PASSWORD'
+
   ];
   
   // Shopify environment variables are only required if using Shopify integration
