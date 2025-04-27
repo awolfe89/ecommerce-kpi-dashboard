@@ -22,11 +22,12 @@
 [template.environment]
   NETLIFY_IDENTITY_ENABLED = "true"
 
-# Functions configuration
+# Functions configuration - correct syntax
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
   external_node_modules = ["firebase-admin", "openai"]
-  # Increase timeout to 30 seconds (maximum allowed for Netlify)
-  timeout = 30
 
+# Set function timeout through environment variable
+[build.environment]
+  NETLIFY_FUNCTION_TIMEOUT_SECONDS = "30"
