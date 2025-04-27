@@ -4,7 +4,8 @@ import { ThemeContext } from '../../context/ThemeContext';
 import KPIDataForm from '../KPIDataForm';
 import KPIDataTable from '../KPIDataTable';
 import ShopifyConfig from '../ShopifyConfig';
-import ReportButton from '../ReportButton';
+
+import BackgroundReportButton from '../BackgroundReportButton';
 
 const DataManagement = ({
   isEditing,
@@ -44,7 +45,7 @@ const DataManagement = ({
           </button>
           
           {/* Report Generation Button */}
-          <ReportButton
+          <BackgroundReportButton
             selectedWebsite={selectedWebsite}
             websiteName={websiteName}
             selectedYear={selectedYear}

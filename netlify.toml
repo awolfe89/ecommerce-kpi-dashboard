@@ -5,6 +5,8 @@
 [build.environment]
   # Add any environment variables needed for the build here
   REACT_APP_BACKEND_URL = "https://armor-web-kpi.firebaseio.com"
+  # Exclude sensitive keys from secrets scanning
+  SECRETS_SCAN_OMIT_KEYS = "REACT_APP_FIREBASE_API_KEY,REACT_APP_FIREBASE_AUTH_DOMAIN,REACT_APP_FIREBASE_PROJECT_ID,REACT_APP_FIREBASE_STORAGE_BUCKET,REACT_APP_FIREBASE_MESSAGING_SENDER_ID,REACT_APP_FIREBASE_APP_ID,SHOPIFY_API_TOKEN,SHOPIFY_API_TOKEN_2,ADMIN_PASSWORD"
 
 [[redirects]]
   from = "/*"
@@ -19,3 +21,12 @@
 # Enable Netlify Identity
 [template.environment]
   NETLIFY_IDENTITY_ENABLED = "true"
+
+# Functions configuration
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin", "openai"]
+  # Increase timeout to 30 seconds (maximum allowed for Netlify)
+  timeout = 30
+

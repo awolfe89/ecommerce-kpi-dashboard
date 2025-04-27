@@ -1,16 +1,16 @@
-// src/components/ReportButton.js
-import React, { useState } from 'react';
-import aiReportService from '../services/aiReportService';
+// src/components/BackgroundReportButton.js
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
+import aiReportService from '../services/aiReportService';
 
-const ReportButton = ({ 
+const BackgroundReportButton = ({ 
   selectedWebsite, 
   websiteName, 
   selectedYear, 
   data, 
   prevYearData,
   requirePassword = true,
-  reportPassword = 'Analyzer2025' // Default password, should be configured in .env
+  reportPassword = 'analyzer2025' // Default password, should be configured in .env
 }) => {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
@@ -18,6 +18,12 @@ const ReportButton = ({
   const [showModal, setShowModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  
+  // Status polling
+  const [reportId, setReportId] = useState(null);
+  const [reportStatus, setReportStatus] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
+  const pollingRef = useRef(null);
   
   // Prepare data for report generation
   const prepareDataContext = () => {
@@ -47,31 +53,117 @@ const ReportButton = ({
     };
   };
   
-  // Generate a performance report
-  const generateReport = async () => {
+  // Initialize a report request
+  const requestReport = async () => {
     setLoading(true);
     setError(null);
     
     try {
       const dataContext = prepareDataContext();
-      const generatedReport = await aiReportService.generateMonthlyReport(dataContext);
       
-      setReport(generatedReport);
-      setShowModal(true);
+      // Request a report to be generated in the background
+      const response = await aiReportService.requestReport('monthly', dataContext);
+      
+      // Store the report ID for polling
+      setReportId(response.reportId);
+      setReportStatus(response.status);
+      
+      // Start polling for report status
+      startPolling(response.reportId);
+      
     } catch (err) {
-      console.error('Error generating report:', err);
-      setError('An error occurred while generating the report. Please try again later.');
-    } finally {
+      console.error('Error requesting report:', err);
+      setError('Failed to initiate report generation. Please try again later.');
       setLoading(false);
     }
   };
+  
+  // Start polling for report status
+  const startPolling = (id) => {
+    // Clear any existing interval
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+    
+    // Start with a short interval that gradually increases
+    let interval = 2000; // 2 seconds
+    let pollCount = 0;
+    
+    const poll = async () => {
+      try {
+        // Check the status of the report
+        const status = await aiReportService.checkReportStatus(id);
+        setReportStatus(status.status);
+        
+        // If the report is completed, fetch the full report
+        if (status.status === 'completed' && status.report) {
+          setReport(status.report);
+          setShowModal(true);
+          setLoading(false);
+          
+          // Stop polling
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        } 
+        // If the report failed, show an error
+        else if (status.status === 'failed') {
+          setError(`Report generation failed: ${status.error || 'Unknown error'}`);
+          setLoading(false);
+          
+          // Stop polling
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+        // Otherwise, continue polling with increased interval
+        else {
+          pollCount++;
+          
+          // Increase interval after several attempts (up to a reasonable maximum)
+          if (pollCount === 5) interval = 5000; // 5 seconds
+          if (pollCount === 10) interval = 10000; // 10 seconds
+          if (pollCount === 15) interval = 30000; // 30 seconds
+          
+          // If we've been polling for too long (over 5 minutes), stop and show an error
+          if (pollCount > 30) {
+            setError('Report is taking too long to generate. Please try again later.');
+            setLoading(false);
+            
+            // Stop polling
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+        }
+      } catch (err) {
+        console.error('Error polling report status:', err);
+        setError('Error checking report status. Please try again later.');
+        setLoading(false);
+        
+        // Stop polling
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+    
+    // Start polling immediately and then on the interval
+    poll();
+    pollingRef.current = setInterval(poll, interval);
+  };
+  
+  // Clean up interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, []);
   
   // Handle the report generation button click
   const handleGenerateReport = () => {
     if (requirePassword) {
       setShowPasswordModal(true);
     } else {
-      generateReport();
+      requestReport();
     }
   };
   
@@ -79,7 +171,7 @@ const ReportButton = ({
   const verifyPasswordAndGenerate = () => {
     if (passwordInput === reportPassword) {
       setShowPasswordModal(false);
-      generateReport();
+      requestReport();
     } else {
       setError('Incorrect password');
     }
@@ -92,6 +184,18 @@ const ReportButton = ({
     return monthNames[monthNum - 1];
   };
 
+  // Get status message based on current status
+  const getStatusMessage = () => {
+    switch (reportStatus) {
+      case 'pending':
+        return 'Report queued for processing...';
+      case 'processing':
+        return 'Generating report, please wait...';
+      default:
+        return 'Generating report...';
+    }
+  };
+
   return (
     <>
       <button
@@ -99,7 +203,7 @@ const ReportButton = ({
         disabled={loading}
         className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
       >
-        {loading ? 'Generating Report...' : 'Generate Performance Report'}
+        {loading ? getStatusMessage() : 'Generate Performance Report'}
       </button>
       
       {error && (
@@ -118,6 +222,11 @@ const ReportButton = ({
               onChange={(e) => setPasswordInput(e.target.value)}
               className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               placeholder="Enter password"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  verifyPasswordAndGenerate();
+                }
+              }}
             />
             
             {error && (
@@ -126,7 +235,10 @@ const ReportButton = ({
             
             <div className="flex justify-end mt-4 space-x-2">
               <button
-                onClick={() => setShowPasswordModal(false)}
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setError(null);
+                }}
                 className="px-4 py-2 border rounded-md"
               >
                 Cancel
@@ -147,6 +259,7 @@ const ReportButton = ({
         <Modal 
           title={report.title || `Performance Report - ${websiteName}`}
           onClose={() => setShowModal(false)}
+          size="lg"
         >
           <div className="prose dark:prose-invert max-w-none">
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md mb-4">
@@ -221,4 +334,4 @@ const ReportButton = ({
   );
 };
 
-export default ReportButton;
+export default BackgroundReportButton;
