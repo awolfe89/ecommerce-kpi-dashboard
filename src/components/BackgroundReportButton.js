@@ -124,7 +124,7 @@ const BackgroundReportButton = ({
           if (pollCount === 15) interval = 30000; // 30 seconds
           
           // If we've been polling for too long (over 5 minutes), stop and show an error
-          if (pollCount > 30) {
+          if (pollCount > 120) {
             setError('Report is taking too long to generate. Please try again later.');
             setLoading(false);
             
@@ -150,13 +150,19 @@ const BackgroundReportButton = ({
   };
   
   // Clean up interval on component unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
-  }, []);
+ // Add to useEffect in BackgroundReportButton.js
+useEffect(() => {
+  // Check if there's a reportId in localStorage
+  const savedReportId = localStorage.getItem('lastReportId');
+  if (savedReportId) {
+    setReportId(savedReportId);
+    startPolling(savedReportId);
+  }
+}, []);
+
+// And when setting a new reportId:
+setReportId(response.reportId);
+localStorage.setItem('lastReportId', response.reportId);
   
   // Handle the report generation button click
   const handleGenerateReport = () => {
