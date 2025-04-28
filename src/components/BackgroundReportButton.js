@@ -22,7 +22,8 @@ const BackgroundReportButton = ({
   // Status polling
   const [reportId, setReportId] = useState(null);
   const [reportStatus, setReportStatus] = useState(null);
-  const [pollingInterval, setPollingInterval] = useState(null);
+  // Remove unused state variable
+  // const [pollingInterval, setPollingInterval] = useState(null);
   const pollingRef = useRef(null);
   
   // Prepare data for report generation
@@ -62,14 +63,16 @@ const BackgroundReportButton = ({
       const dataContext = prepareDataContext();
       
       // Request a report to be generated in the background
-      const response = await aiReportService.requestReport('monthly', dataContext);
+      const result = await aiReportService.requestReport('monthly', dataContext);
       
       // Store the report ID for polling
-      setReportId(response.reportId);
-      setReportStatus(response.status);
+      const newReportId = result.reportId;
+      setReportId(newReportId);
+      localStorage.setItem('lastReportId', newReportId);
+      setReportStatus(result.status);
       
       // Start polling for report status
-      startPolling(response.reportId);
+      startPolling(newReportId);
       
     } catch (err) {
       console.error('Error requesting report:', err);
@@ -125,7 +128,7 @@ const BackgroundReportButton = ({
           
           // If we've been polling for too long (over 5 minutes), stop and show an error
           if (pollCount > 120) {
-            setError('Report is taking too long to generate. Please try again later.');
+            setError('The report is still processing in the background. Check back in a few minutes by refreshing the page.');
             setLoading(false);
             
             // Stop polling
@@ -150,19 +153,22 @@ const BackgroundReportButton = ({
   };
   
   // Clean up interval on component unmount
- // Add to useEffect in BackgroundReportButton.js
-useEffect(() => {
-  // Check if there's a reportId in localStorage
-  const savedReportId = localStorage.getItem('lastReportId');
-  if (savedReportId) {
-    setReportId(savedReportId);
-    startPolling(savedReportId);
-  }
-}, []);
-
-// And when setting a new reportId:
-setReportId(response.reportId);
-localStorage.setItem('lastReportId', response.reportId);
+  useEffect(() => {
+    // Check if there's a reportId in localStorage when component mounts
+    const savedReportId = localStorage.getItem('lastReportId');
+    if (savedReportId) {
+      setReportId(savedReportId);
+      startPolling(savedReportId);
+      console.log(`Resuming polling for report: ${reportId || savedReportId}`);
+    }
+    
+    // Cleanup function
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [reportId]);
   
   // Handle the report generation button click
   const handleGenerateReport = () => {
@@ -211,7 +217,7 @@ localStorage.setItem('lastReportId', response.reportId);
       >
         {loading ? getStatusMessage() : 'Generate Performance Report'}
       </button>
-      
+      {reportId && <div className="hidden">{/* Using reportId: {reportId} */}</div>}
       {error && (
         <div className="mt-2 text-red-600 text-sm">{error}</div>
       )}

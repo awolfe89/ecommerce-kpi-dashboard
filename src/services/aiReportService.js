@@ -121,14 +121,15 @@ class AIReportService {
       
       // Poll for completion
       const maxAttempts = 30;
-      const initialDelay = 2000; // 2 seconds
-      
       let attempts = 0;
-      let delay = initialDelay;
+      let currentDelay = 2000; // Start with 2 seconds
       
       while (attempts < maxAttempts) {
+        // Use a fixed value for delay - this avoids the ESLint warning
+        const delayToUse = currentDelay;
+        
         // Wait for the specified delay
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, delayToUse));
         
         // Check report status
         const statusResponse = await this.checkReportStatus(reportId);
@@ -140,7 +141,7 @@ class AIReportService {
         }
         
         // Increase delay for next attempt, but cap it
-        delay = Math.min(delay * 1.5, 10000); // Cap at 10 seconds
+        currentDelay = Math.min(currentDelay * 1.5, 10000); // Cap at 10 seconds
         attempts++;
       }
       
@@ -168,14 +169,15 @@ class AIReportService {
       
       // Poll for completion
       const maxAttempts = 30;
-      const initialDelay = 2000; // 2 seconds
-      
       let attempts = 0;
-      let delay = initialDelay;
+      let currentDelay = 2000; // Start with 2 seconds
       
       while (attempts < maxAttempts) {
+        // Use a fixed value for delay - this avoids the ESLint warning
+        const delayToUse = currentDelay;
+        
         // Wait for the specified delay
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, delayToUse));
         
         // Check report status
         const statusResponse = await this.checkReportStatus(reportId);
@@ -187,7 +189,7 @@ class AIReportService {
         }
         
         // Increase delay for next attempt, but cap it
-        delay = Math.min(delay * 1.5, 10000); // Cap at 10 seconds
+        currentDelay = Math.min(currentDelay * 1.5, 10000); // Cap at 10 seconds
         attempts++;
       }
       

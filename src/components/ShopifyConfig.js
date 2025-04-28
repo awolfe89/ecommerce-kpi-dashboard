@@ -1,5 +1,5 @@
 // src/components/ShopifyConfig.js
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
 import shopifyService from '../services/shopifyService';
 
@@ -10,17 +10,11 @@ const ShopifyConfig = ({ selectedWebsite, isShopifyWebsite, syncAllShopifyData, 
   
   // Get the domain for the selected website
   const shopDomain = selectedWebsite === 'website2' 
-    ? process.env.SHOPIFY_DOMAIN 
-    : process.env.SHOPIFY_DOMAIN_2;
+    ? process.env.REACT_APP_SHOPIFY_DOMAIN 
+    : process.env.REACT_APP_SHOPIFY_DOMAIN_2;
   
-  // Check connection status when component mounts or website changes
-  useEffect(() => {
-    if (isShopifyWebsite) {
-      testConnection();
-    }
-  }, [isShopifyWebsite, selectedWebsite]);
-  
-  const testConnection = async () => {
+  // Memoize the testConnection function with useCallback
+  const testConnection = useCallback(async () => {
     if (!isShopifyWebsite) return;
     
     setTesting(true);
@@ -33,7 +27,14 @@ const ShopifyConfig = ({ selectedWebsite, isShopifyWebsite, syncAllShopifyData, 
     } finally {
       setTesting(false);
     }
-  };
+  }, [isShopifyWebsite, selectedWebsite]); // Include all dependencies
+  
+  // Check connection status when component mounts or website changes
+  useEffect(() => {
+    if (isShopifyWebsite) {
+      testConnection();
+    }
+  }, [isShopifyWebsite, testConnection]); // Now testConnection is properly included
   
   // If this is not a Shopify website, don't render anything
   if (!isShopifyWebsite) {

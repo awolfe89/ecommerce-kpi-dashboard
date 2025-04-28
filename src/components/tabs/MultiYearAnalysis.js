@@ -14,17 +14,13 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   ComposedChart,
-  Area,
   ReferenceLine
 } from 'recharts';
 
 const MultiYearAnalysis = ({ selectedWebsite, websiteName }) => {
   const { darkMode } = useContext(ThemeContext);
-  const [allYearsData, setAllYearsData] = useState([]);
+  //const [ setAllYearsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [yearlyTotals, setYearlyTotals] = useState([]);
   const [yearlyAverages, setYearlyAverages] = useState([]);
@@ -283,7 +279,7 @@ const MultiYearAnalysis = ({ selectedWebsite, websiteName }) => {
           fetchedData.push({ id: doc.id, ...doc.data() });
         });
         
-        setAllYearsData(fetchedData);
+       // setAllYearsData(fetchedData);
         calculateYearlyMetrics(fetchedData);
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -295,10 +291,7 @@ const MultiYearAnalysis = ({ selectedWebsite, websiteName }) => {
     fetchAllData();
   }, [selectedWebsite, calculateYearlyMetrics]);
 
-  // Format currency values
-  const formatCurrency = (value) => {
-    return `$${value.toLocaleString()}`;
-  };
+
   
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -651,8 +644,6 @@ const MultiYearAnalysis = ({ selectedWebsite, websiteName }) => {
               </p>
             )}
           </div>
-          
-          // Replace the Quarterly Trends Chart section with this fixed code:
 
 {/* Quarterly Trends Chart */}
 <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg`}>

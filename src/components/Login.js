@@ -1,9 +1,11 @@
+// src/components/Login.js
 import React, { useState, useEffect } from 'react';
 import auth from '../config/netlifyAuth';
 
 const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Remove unused state variables
+  // const [email, setEmail] = useState('');
+  // const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   // Check if user is already logged in
