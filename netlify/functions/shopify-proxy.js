@@ -15,20 +15,39 @@ exports.handler = async (event, context) => {
     const data = JSON.parse(event.body);
     const { 
       endpoint, 
-      method = 'GET', 
-      shopDomain,
-      apiVersion,
-      accessToken,
+      method = 'GET',
+      websiteId, // Now just getting websiteId, not credentials
       queryParams = {},
       body = null
     } = data;
 
-    if (!endpoint || !shopDomain || !apiVersion || !accessToken) {
+    if (!endpoint || !websiteId) {
       return {
         statusCode: 400,
         body: JSON.stringify({
           success: false,
           message: 'Missing required parameters'
+        })
+      };
+    }
+
+    // Get credentials from environment vars based on websiteId
+    let shopDomain, accessToken, apiVersion = '2023-10';
+    
+    if (websiteId === 'website3') {
+      shopDomain = process.env.SHOPIFY_DOMAIN_2;
+      accessToken = process.env.SHOPIFY_API_TOKEN_2;
+    } else {
+      shopDomain = process.env.SHOPIFY_DOMAIN;
+      accessToken = process.env.SHOPIFY_API_TOKEN;
+    }
+
+    if (!shopDomain || !accessToken) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          success: false,
+          message: 'Server configuration error: Shopify credentials not found'
         })
       };
     }
