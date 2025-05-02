@@ -247,7 +247,9 @@ Format your response as a JSON object with the following structure:
 }
 
 IMPORTANT: Your analysis should be data-driven, insightful, and professional. Include both achievements and areas of concern. Keep each section concise but informative.
-  `;
+IMPORTANT: **Respond with raw JSON only**, without any markdown formatting or code fences.
++IMPORTANT: **Do not mention or include any metric whose value is zero or null.** Omit any commentary on metrics that are 0.  
+`;
 }
 
 // Generate a prompt for the comparison report
@@ -300,7 +302,9 @@ Format your response as a JSON object with the following structure:
 }
 
 IMPORTANT: Your analysis should be data-driven, insightful, and professional. Compare and contrast the websites in a meaningful way to extract actionable insights.
-  `;
+IMPORTANT: **Respond with raw JSON only**, without any markdown formatting or code fences.
++IMPORTANT: **Do not mention or include any metric whose value is zero or null.** Omit any commentary on metrics that are 0.  
+`;
 }
 
 // Call the OpenAI API
@@ -344,7 +348,18 @@ async function callOpenAI(prompt, model) {
 function formatReport(response, data, type) {
   try {
     // Extract the response content
-    const content = response.choices[0].message.content;
+        let content = response.choices[0].message.content.trim();
+    
+        // Remove Markdown code-fences or stray backticks, if any slipped through
+        if (content.startsWith('```')) {
+         content = content
+            .replace(/^```(?:json)?\s*/, '')  // opening fence
+            .replace(/```$/, '')              // closing fence
+            .trim();
+        }
+        if (content.startsWith('`') && content.endsWith('`')) {
+          content = content.slice(1, -1).trim();
+        }
     
     // Parse the JSON response
     const reportData = JSON.parse(content);

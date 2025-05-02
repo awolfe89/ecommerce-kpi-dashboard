@@ -51,16 +51,29 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
-
-  // Verify authentication (if needed)
-  const token = event.headers.authorization?.split('Bearer ')[1];
-  if (!token) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Unauthorized - Missing token' })
-    };
+    // ─── skip Identity check when running `netlify dev` ─────────────
+  const isLocal = process.env.NETLIFY_DEV === 'true';
+  if (!isLocal) {
+    // only in production require a Bearer token
+    const token = event.headers.authorization?.split('Bearer ')[1];
+    if (!token) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Unauthorized - Missing token' })
+      };
+    }
+    // (optional) verify token here…
   }
 
+  // Verify authentication (if needed)
+ // const token = event.headers.authorization?.split('Bearer ')[1];
+ // if (!token) {
+ //   return {
+ //     statusCode: 401,
+ //     body: JSON.stringify({ error: 'Unauthorized - Missing token' })
+ //   };
+ // }
+   
   try {
     let reportId;
     

@@ -107,6 +107,8 @@ const BackgroundReportButton = ({
           // Stop polling
           clearInterval(pollingRef.current);
           pollingRef.current = null;
+           // Remove the saved ID so the UI knows there’s nothing left to fetch
+          localStorage.removeItem('lastReportId');
         } 
         // If the report failed, show an error
         else if (status.status === 'failed') {
@@ -158,8 +160,7 @@ const BackgroundReportButton = ({
     const savedReportId = localStorage.getItem('lastReportId');
     if (savedReportId) {
       setReportId(savedReportId);
-      startPolling(savedReportId);
-      console.log(`Resuming polling for report: ${reportId || savedReportId}`);
+
     }
     
     // Cleanup function
@@ -168,7 +169,7 @@ const BackgroundReportButton = ({
         clearInterval(pollingRef.current);
       }
     };
-  }, [reportId]);
+  }, []);
   
   // Handle the report generation button click
   const handleGenerateReport = () => {
@@ -217,6 +218,24 @@ const BackgroundReportButton = ({
       >
         {loading ? getStatusMessage() : 'Generate Performance Report'}
       </button>
+      {!loading && !showModal && reportId && (
+       <button
+         onClick={() => startPolling(reportId)}
+         className="ml-2 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+       >
+         Fetch Last Report
+       </button>
+     )}
+     {reportStatus && !loading && !showModal && (
+  <div className="mt-2 text-sm text-gray-700">
+    {reportStatus === 'completed'
+      ? '✅ Report is ready—click “Fetch Last Report” to view.'
+      : reportStatus === 'failed'
+        ? '⚠️ Report failed. Try again later.'
+        : getStatusMessage()}
+  </div>
+)}
+
       {reportId && <div className="hidden">{/* Using reportId: {reportId} */}</div>}
       {error && (
         <div className="mt-2 text-red-600 text-sm">{error}</div>
