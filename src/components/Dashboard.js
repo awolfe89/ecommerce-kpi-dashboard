@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import auth from '../config/netlifyAuth';
 import DashboardLayout from './layout/DashboardLayout';
 import WebsiteSelector from './WebsiteSelector';
@@ -39,6 +39,7 @@ const Dashboard = ({ onLogout }) => {
   
   // Form editing state
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Use KPI data hook for data management
   const {
@@ -68,49 +69,54 @@ const Dashboard = ({ onLogout }) => {
   };
   const years = generateYearsArray();
   
-  // Prepare chart data
+  // Prepare chart data with memoization
   const {
     chartData,
     userChartData,
     sessionDurationData,
     bounceRateData,
     combinedData
-  } = prepareChartData(data, prevYearData, monthNames);
+  } = useMemo(() => prepareChartData(data, prevYearData, monthNames), [data, prevYearData]);
   
   // Handle saving KPI data
   const saveKPI = async () => {
-    // Prepare the data object
-    const kpiData = {
-      year: selectedYear,
-      month: currentKPI.month,
-      sales: Number(currentKPI.sales || 0),
-      users: Number(currentKPI.users || 0), 
-      sessionDuration: Number(currentKPI.sessionDuration || 0),
-      bounceRate: Number(currentKPI.bounceRate || 0),
-      website: selectedWebsite
-    };
-    
-    // Add ID if we're editing an existing record
-    if (currentKPI.id) {
-      kpiData.id = currentKPI.id;
-    }
-    
-    // Save the data
-    const success = await handleAddKPI(kpiData);
-    
-    if (success) {
-      // Reset form
-      setCurrentKPI({
+    setIsSaving(true);
+    try {
+      // Validate and prepare the data object
+      const kpiData = {
         year: selectedYear,
-        month: 1,
-        sales: 0,
-        users: 0,
-        sessionDuration: 0,
-        bounceRate: 0,
-        website: selectedWebsite,
-        id: null
-      });
-      setIsEditing(false);
+        month: currentKPI.month,
+        sales: Math.max(0, Number(currentKPI.sales || 0)),
+        users: Math.max(0, Math.round(Number(currentKPI.users || 0))), 
+        sessionDuration: Math.max(0, Number(currentKPI.sessionDuration || 0)),
+        bounceRate: Math.max(0, Math.min(100, Number(currentKPI.bounceRate || 0))),
+        website: selectedWebsite
+      };
+      
+      // Add ID if we're editing an existing record
+      if (currentKPI.id) {
+        kpiData.id = currentKPI.id;
+      }
+      
+      // Save the data
+      const success = await handleAddKPI(kpiData);
+      
+      if (success) {
+        // Reset form
+        setCurrentKPI({
+          year: selectedYear,
+          month: 1,
+          sales: 0,
+          users: 0,
+          sessionDuration: 0,
+          bounceRate: 0,
+          website: selectedWebsite,
+          id: null
+        });
+        setIsEditing(false);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -136,6 +142,7 @@ const Dashboard = ({ onLogout }) => {
       onLogout();
     } catch (error) {
       console.error("Error signing out: ", error);
+      alert('Unable to sign out. Please try again.');
     }
   };
 
@@ -182,7 +189,7 @@ const Dashboard = ({ onLogout }) => {
         <>
           {/* Add the ShopifyTestComponent when on data tab and using Shopify website */}
           {isShopifyWebsite && (
-            <ShopifyTestComponent />
+            <ShopifyTestComponent selectedWebsite={selectedWebsite} />
           )}
           
           <DataManagement
@@ -191,6 +198,7 @@ const Dashboard = ({ onLogout }) => {
             currentKPI={currentKPI}
             setCurrentKPI={setCurrentKPI}
             handleAddKPI={saveKPI}
+            isSaving={isSaving}
             loading={loading}
             syncingData={syncingData}
             combinedData={combinedData}

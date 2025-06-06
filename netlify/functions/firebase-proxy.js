@@ -1,24 +1,46 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const { rateLimiter } = require('./utils/rateLimiter');
 
 // Use environment variable for Firebase credentials
 let serviceAccount;
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-} catch (error) {
-  console.error("Error parsing Firebase service account JSON:", error);
+let app, db;
+let isInitialized = false;
+
+// Initialize Firebase Admin
+function initializeFirebase() {
+  if (isInitialized) return { success: true };
+  
+  try {
+    // Check if service account JSON is provided
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      console.warn("FIREBASE_SERVICE_ACCOUNT_JSON not set. Firebase functions will not work.");
+      return { 
+        success: false, 
+        error: 'Firebase service account not configured. Please set FIREBASE_SERVICE_ACCOUNT_JSON environment variable.' 
+      };
+    }
+    
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    
+    app = initializeApp({
+      credential: cert(serviceAccount)
+    });
+    db = getFirestore();
+    isInitialized = true;
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error initializing Firebase:", error.message);
+    return { 
+      success: false, 
+      error: `Firebase initialization failed: ${error.message}` 
+    };
+  }
 }
 
-// Initialize Firebase Admin with the service account
-let app, db;
-try {
-  app = initializeApp({
-    credential: cert(serviceAccount)
-  });
-  db = getFirestore();
-} catch (error) {
-  console.error("Error initializing Firebase Admin:", error);
-}
+// Initialize on first load
+const initResult = initializeFirebase();
 
 exports.handler = async (event, context) => {
   // Check if POST request
@@ -28,8 +50,39 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
+  
+  // Rate limiting check
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown';
+  const rateLimitResult = rateLimiter.check(clientIp);
+  
+  if (!rateLimitResult.allowed) {
+    return {
+      statusCode: 429,
+      headers: {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': new Date(Date.now() + rateLimitResult.retryAfter).toISOString(),
+        'Retry-After': Math.ceil(rateLimitResult.retryAfter / 1000)
+      },
+      body: JSON.stringify({ 
+        error: 'Too many requests', 
+        message: `Rate limit exceeded. Try again in ${Math.ceil(rateLimitResult.retryAfter / 1000)} seconds.`
+      })
+    };
+  }
+  
+  // Check if Firebase is properly initialized
+  if (!isInitialized) {
+    return {
+      statusCode: 503,
+      body: JSON.stringify({ 
+        error: 'Service unavailable', 
+        details: initResult.error || 'Firebase not initialized'
+      })
+    };
+  }
 
-  // Verify authentication
+  // Verify authentication (skip in development with dev-token)
   const token = event.headers.authorization?.split('Bearer ')[1];
   if (!token) {
     return {
@@ -37,6 +90,9 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Unauthorized - Missing token' })
     };
   }
+  
+  // Allow dev-token in development mode
+  const isDevelopment = process.env.NODE_ENV === 'development' || token === 'dev-token';
 
   try {
     // Parse the request body

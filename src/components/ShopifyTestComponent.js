@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import shopifyService from '../services/shopifyService';
 
-const ShopifyTestComponent = () => {
+const ShopifyTestComponent = ({ selectedWebsite }) => {
   const [testStatus, setTestStatus] = useState('pending');
   const [testResult, setTestResult] = useState(null);
   const [shopInfo, setShopInfo] = useState(null);
@@ -15,30 +15,19 @@ const ShopifyTestComponent = () => {
   const testShopEndpoint = async () => {
     setTestStatus('testing');
     try {
-      // Make a direct request to shop.json via the proxy
-      const response = await fetch('http://localhost:4000/api/shopify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          endpoint: 'shop.json',
-          method: 'GET',
-          shopDomain: process.env.SHOPIFY_DOMAIN,
-          apiVersion: '2023-10',
-          accessToken: process.env.SHOPIFY_API_TOKEN
-        })
-      });
-
-      const result = await response.json();
-      console.log('Direct shop.json test result:', result);
+      // Use the shopifyService to test connection
+      const isConnected = await shopifyService.testConnection(selectedWebsite);
       
-      if (result.success && result.data.shop) {
+      if (isConnected) {
+        // If connection successful, fetch shop data directly
+        const shopData = await shopifyService.makeProxyRequest('shop.json', { 
+          websiteId: selectedWebsite 
+        });
         setTestStatus('success');
-        setShopInfo(result.data.shop);
+        setShopInfo(shopData.shop);
       } else {
         setTestStatus('failed');
-        setTestResult(result);
+        setTestResult({ message: 'Connection test failed' });
       }
     } catch (error) {
       console.error('Test error:', error);
@@ -53,50 +42,17 @@ const ShopifyTestComponent = () => {
     try {
       const { year, month } = lastMonth;
       
-      // Calculate date range
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      // Use shopifyService to fetch sales data
+      const salesData = await shopifyService.getMonthlySales(year, month, selectedWebsite);
       
-      // Format dates as YYYY-MM-DD
-      const formatDate = (date) => {
-        return date.toISOString().split('T')[0];
-      };
+      console.log(`Orders for ${year}-${month} test result:`, salesData);
       
-      // Make a direct request to orders.json via the proxy
-      const response = await fetch('http://localhost:4000/api/shopify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          endpoint: 'orders.json',
-          method: 'GET',
-          shopDomain: process.env.SHOPIFY_DOMAIN,
-          apiVersion: '2023-10',
-          accessToken: process.env.SHOPIFY_API_TOKEN,
-          queryParams: {
-            status: 'any',
-            created_at_min: formatDate(startDate),
-            created_at_max: formatDate(endDate),
-            limit: 250
-          }
-        })
+      setTestStatus('success');
+      setTestResult({
+        orderCount: salesData.orderCount,
+        totalSales: salesData.sales,
+        message: `Found ${salesData.orderCount} orders with total sales of $${salesData.sales.toFixed(2)}`
       });
-
-      const result = await response.json();
-      console.log(`Orders for ${year}-${month} test result:`, result);
-      
-      if (result.success) {
-        setTestStatus('success');
-        setTestResult({
-          orderCount: result.data.orders?.length || 0,
-          firstOrderId: result.data.orders?.[0]?.id || 'No orders found',
-          sample: result.data.orders?.[0] || null
-        });
-      } else {
-        setTestStatus('failed');
-        setTestResult(result);
-      }
     } catch (error) {
       console.error('Test error:', error);
       setTestStatus('error');
@@ -109,7 +65,7 @@ const ShopifyTestComponent = () => {
     setTestStatus('testing');
     try {
       const { year, month } = lastMonth;
-      const kpiData = await shopifyService.getMonthlyKPIData(year, month);
+      const kpiData = await shopifyService.getMonthlyKPIData(year, month, selectedWebsite);
       console.log(`KPI data for ${year}-${month}:`, kpiData);
       
       setTestStatus('success');
@@ -146,7 +102,7 @@ const ShopifyTestComponent = () => {
             type="number"
             value={lastMonth.year}
             onChange={handleYearChange}
-            className="w-full rounded-md border px-3 py-2 border-gray-300"
+            className={`w-full rounded-md border px-3 py-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
           />
         </div>
         <div>
@@ -157,7 +113,7 @@ const ShopifyTestComponent = () => {
             max="12"
             value={lastMonth.month}
             onChange={handleMonthChange}
-            className="w-full rounded-md border px-3 py-2 border-gray-300"
+            className={`w-full rounded-md border px-3 py-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
           />
         </div>
       </div>

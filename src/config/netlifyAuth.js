@@ -6,8 +6,11 @@ const initializeIdentity = () => {
   // Check if we're in development
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  // Your Netlify site URL - replace with your actual Netlify site URL
-  const siteURL = 'https://ecommercekpidashboard.netlify.app';
+  // Use environment variable or fallback to production URL
+  const siteURL = process.env.REACT_APP_NETLIFY_SITE_URL || 
+                  window.location.hostname === 'localhost' 
+                    ? 'https://ecommercekpidashboard.netlify.app'
+                    : window.location.origin;
   
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     netlifyIdentity.init({
@@ -75,11 +78,27 @@ export const auth = {
   
   // Get current user
   getCurrentUser() {
+    // Return mock user in development
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        id: 'dev-user',
+        email: 'dev@localhost',
+        user_metadata: {},
+        token: {
+          access_token: 'dev-token'
+        }
+      };
+    }
     return netlifyIdentity.currentUser();
   },
   
   // Get auth token for API calls
   async getAuthToken() {
+    // Return mock token in development
+    if (process.env.NODE_ENV === 'development') {
+      return 'dev-token';
+    }
+    
     const user = netlifyIdentity.currentUser();
     if (!user) {
       throw new Error('No user logged in');

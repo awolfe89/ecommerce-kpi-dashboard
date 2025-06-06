@@ -13,6 +13,7 @@ const DataManagement = ({
   currentKPI,
   setCurrentKPI,
   handleAddKPI,
+  isSaving,
   loading,
   combinedData,
   monthNames,
@@ -71,6 +72,7 @@ const DataManagement = ({
           setCurrentKPI={setCurrentKPI} 
           handleAddKPI={handleAddKPI} 
           monthNames={monthNames}
+          isSaving={isSaving}
         />
       )}
       

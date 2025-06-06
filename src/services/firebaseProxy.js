@@ -59,4 +59,5 @@ class FirebaseProxyService {
   }
 }
 
-export default new FirebaseProxyService();
+const firebaseProxyService = new FirebaseProxyService();
+export default firebaseProxyService;

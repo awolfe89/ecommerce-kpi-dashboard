@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import firebaseProxy from '../services/firebaseProxy';
 import shopifyService from '../services/shopifyService';
 
@@ -20,23 +20,35 @@ const useKPIData = (selectedYear, selectedWebsite) => {
     website: selectedWebsite,
     id: null
   });
+  
+  // Use ref to track the latest fetch request
+  const fetchRequestId = useRef(0);
 
   // Check if the selected website is a Shopify site
   const isShopifyWebsite = shopifyWebsites.includes(selectedWebsite);
   
   const fetchData = useCallback(async () => {
+    // Increment request ID to track this specific request
+    const currentRequestId = ++fetchRequestId.current;
+    
     setLoading(true);
     try {
-      // Query through Firebase proxy
-      const currentYearResult = await firebaseProxy.getDocuments('kpiData', [
-        { field: 'website', operation: '==', value: selectedWebsite },
-        { field: 'year', operation: '==', value: selectedYear }
+      // Run both queries in parallel
+      const [currentYearResult, prevYearResult] = await Promise.all([
+        firebaseProxy.getDocuments('kpiData', [
+          { field: 'website', operation: '==', value: selectedWebsite },
+          { field: 'year', operation: '==', value: selectedYear }
+        ]),
+        firebaseProxy.getDocuments('kpiData', [
+          { field: 'website', operation: '==', value: selectedWebsite },
+          { field: 'year', operation: '==', value: selectedYear - 1 }
+        ])
       ]);
       
-      const prevYearResult = await firebaseProxy.getDocuments('kpiData', [
-        { field: 'website', operation: '==', value: selectedWebsite },
-        { field: 'year', operation: '==', value: selectedYear - 1 }
-      ]);
+      // Check if this is still the latest request
+      if (currentRequestId !== fetchRequestId.current) {
+        return; // Abandon this request as a newer one has started
+      }
       
       // Process results
       const currentYearData = currentYearResult.docs || [];
@@ -49,10 +61,16 @@ const useKPIData = (selectedYear, selectedWebsite) => {
       setData(currentYearData);
       setPrevYearData(previousYearData);
     } catch (error) {
-      console.error("Error fetching data: ", error);
-      alert("Failed to fetch data. Please check console for details.");
+      // Only show error if this is still the latest request
+      if (currentRequestId === fetchRequestId.current) {
+        console.error("Error fetching data: ", error);
+        alert(`Unable to load KPI data. ${error.message || 'Please check your connection and try again.'}`);
+      }
     } finally {
-      setLoading(false);
+      // Only update loading state if this is still the latest request
+      if (currentRequestId === fetchRequestId.current) {
+        setLoading(false);
+      }
     }
   }, [selectedYear, selectedWebsite]);
 
@@ -91,7 +109,7 @@ const useKPIData = (selectedYear, selectedWebsite) => {
       return true;
     } catch (error) {
       console.error("Error adding/updating data: ", error);
-      alert("Failed to save data. Please check console for details.");
+      alert(`Unable to save KPI data. ${error.message || 'Please try again.'}`);
       return false;
     }
   };
@@ -103,7 +121,7 @@ const useKPIData = (selectedYear, selectedWebsite) => {
       return true;
     } catch (error) {
       console.error("Error deleting document: ", error);
-      alert("Failed to delete data. Please check console for details.");
+      alert(`Unable to delete KPI data. ${error.message || 'Please try again.'}`);
       return false;
     }
   };

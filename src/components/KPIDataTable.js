@@ -1,9 +1,24 @@
 // src/components/KPIDataTable.js
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { ThemeContext } from '../context/ThemeContext';
+import ConfirmDialog from './ConfirmDialog';
 
 const KPIDataTable = ({ loading, salesComparisonData, monthNames, handleEditKPI, handleDeleteKPI }) => {
   const { darkMode } = useContext(ThemeContext);
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, itemId: null, itemMonth: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(salesComparisonData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = salesComparisonData.slice(startIndex, endIndex);
+  
+  // Reset to page 1 when data changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [salesComparisonData]);
   
   return (
     <div className="overflow-x-auto">
@@ -33,7 +48,7 @@ const KPIDataTable = ({ loading, salesComparisonData, monthNames, handleEditKPI,
               <td colSpan="11" className={`border ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300'} px-4 py-2 text-center`}>No data available</td>
             </tr>
           ) : (
-            salesComparisonData.map((item, index) => (
+            paginatedData.map((item, index) => (
               <tr key={index} className={index % 2 === 0 
                 ? darkMode ? 'bg-gray-700' : 'bg-gray-50' 
                 : darkMode ? 'bg-gray-800' : 'bg-white'
@@ -77,7 +92,11 @@ const KPIDataTable = ({ loading, salesComparisonData, monthNames, handleEditKPI,
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDeleteKPI(item.id)}
+                    onClick={() => setDeleteConfirm({ 
+                      isOpen: true, 
+                      itemId: item.id, 
+                      itemMonth: monthNames[item.month - 1] 
+                    })}
                     className={darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-800'}
                   >
                     Delete
@@ -88,6 +107,82 @@ const KPIDataTable = ({ loading, salesComparisonData, monthNames, handleEditKPI,
           )}
         </tbody>
       </table>
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className={`flex justify-between items-center mt-4 px-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="text-sm">
+            Showing {startIndex + 1} to {Math.min(endIndex, salesComparisonData.length)} of {salesComparisonData.length} entries
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === 1 
+                  ? `cursor-not-allowed opacity-50 ${darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'}`
+                  : `hover:bg-blue-600 hover:text-white ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+              }`}
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers */}
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                // Show first page, last page, current page, and pages around current
+                if (
+                  page === 1 || 
+                  page === totalPages || 
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 rounded text-sm ${
+                        page === currentPage
+                          ? 'bg-blue-600 text-white'
+                          : `hover:bg-blue-600 hover:text-white ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                } else if (page === currentPage - 2 || page === currentPage + 2) {
+                  return <span key={page} className="px-2">...</span>;
+                }
+                return null;
+              })}
+            </div>
+            
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded text-sm ${
+                currentPage === totalPages 
+                  ? `cursor-not-allowed opacity-50 ${darkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-400'}`
+                  : `hover:bg-blue-600 hover:text-white ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onConfirm={() => {
+          handleDeleteKPI(deleteConfirm.itemId);
+          setDeleteConfirm({ isOpen: false, itemId: null, itemMonth: '' });
+        }}
+        onCancel={() => setDeleteConfirm({ isOpen: false, itemId: null, itemMonth: '' })}
+        title="Delete KPI Data"
+        message={`Are you sure you want to delete the data for ${deleteConfirm.itemMonth}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 };

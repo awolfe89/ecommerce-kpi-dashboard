@@ -16,16 +16,19 @@
     "node-fetch": "^2.7.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-scripts": "^3.4.4",
+    "react-scripts": "^5.0.1",
     "recharts": "^2.15.3",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts --openssl-legacy-provider && react-scripts start",
-    "build": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts build",
-    "test": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts test",
-    "eject": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts eject"
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "dev:proxy": "node localProxy.js",
+    "dev": "concurrently \"npm run dev:proxy\" \"npm start\""
   },
+  "proxy": "http://localhost:9999",
   "eslintConfig": {
     "extends": [
       "react-app",

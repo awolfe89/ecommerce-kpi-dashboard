@@ -5,14 +5,74 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Enable CORS for your frontend
-app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+// Simple rate limiter
+const requestCounts = new Map();
+const rateLimiter = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 60;
+  
+  if (!requestCounts.has(ip)) {
+    requestCounts.set(ip, { count: 1, firstRequest: now });
+    return next();
+  }
+  
+  const userData = requestCounts.get(ip);
+  
+  if (now - userData.firstRequest > windowMs) {
+    userData.count = 1;
+    userData.firstRequest = now;
+    return next();
+  }
+  
+  if (userData.count >= maxRequests) {
+    return res.status(429).json({
+      error: 'Too many requests',
+      retryAfter: Math.ceil((userData.firstRequest + windowMs - now) / 1000)
+    });
+  }
+  
+  userData.count++;
+  next();
+};
+
+// Configure CORS with proper security
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests from localhost ports (development)
+    const allowedPatterns = [
+      /^http:\/\/localhost:\d+$/,
+      /^http:\/\/127\.0\.0\.1:\d+$/
+    ];
+    
+    // Allow requests with no origin (e.g., mobile apps, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin matches any allowed pattern
+    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Shopify-Access-Token'],
+  maxAge: 86400 // Cache preflight response for 24 hours
+};
+
+app.use(cors(corsOptions));
 
 // Parse JSON request bodies
 app.use(express.json());
+
+// Apply rate limiting
+app.use(rateLimiter);
 
 // Log all incoming requests
 app.use((req, res, next) => {

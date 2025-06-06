@@ -223,4 +223,5 @@ class AIReportService {
   }
 }
 
-export default new AIReportService();
+const aiReportService = new AIReportService();
+export default aiReportService;

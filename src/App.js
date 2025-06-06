@@ -11,6 +11,14 @@ const App = () => {
   
   // Check authentication state when the app loads
   useEffect(() => {
+    // Bypass auth in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Bypassing authentication');
+      setIsLoggedIn(true);
+      setLoading(false);
+      return;
+    }
+    
     const user = auth.getCurrentUser();
     setIsLoggedIn(!!user);
     setLoading(false);

@@ -1,5 +1,6 @@
 // netlify/functions/shopify-proxy.js
 const fetch = require('node-fetch');
+const { rateLimiter } = require('./utils/rateLimiter');
 
 exports.handler = async (event, context) => {
   // Only allow POST requests
@@ -7,6 +8,26 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 405,
       body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
+  }
+  
+  // Rate limiting check
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown';
+  const rateLimitResult = rateLimiter.check(clientIp);
+  
+  if (!rateLimitResult.allowed) {
+    return {
+      statusCode: 429,
+      headers: {
+        'X-RateLimit-Limit': '60',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': new Date(Date.now() + rateLimitResult.retryAfter).toISOString(),
+        'Retry-After': Math.ceil(rateLimitResult.retryAfter / 1000)
+      },
+      body: JSON.stringify({ 
+        error: 'Too many requests', 
+        message: `Rate limit exceeded. Try again in ${Math.ceil(rateLimitResult.retryAfter / 1000)} seconds.`
+      })
     };
   }
 

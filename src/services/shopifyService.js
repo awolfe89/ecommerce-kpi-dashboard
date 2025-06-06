@@ -106,6 +106,54 @@ class ShopifyService {
   }
 
   /**
+   * Fetch all orders with pagination support
+   * @param {Object} params - Query parameters
+   * @param {string} websiteId - The website identifier
+   * @returns {Promise<Array>} - Array of all orders
+   */
+  async fetchAllOrders(params, websiteId) {
+    let allOrders = [];
+    let hasNextPage = true;
+    let pageInfo = null;
+    
+    while (hasNextPage) {
+      const queryParams = { ...params };
+      
+      // Add pagination cursor if we have one
+      if (pageInfo && pageInfo.nextPageUrl) {
+        // Extract page_info from the URL
+        const url = new URL(pageInfo.nextPageUrl);
+        const pageInfoParam = url.searchParams.get('page_info');
+        if (pageInfoParam) {
+          queryParams.page_info = pageInfoParam;
+        }
+      }
+      
+      const data = await this.makeProxyRequest('orders.json', {
+        websiteId,
+        queryParams
+      });
+      
+      if (data.orders && data.orders.length > 0) {
+        allOrders = allOrders.concat(data.orders);
+        console.log(`Fetched ${data.orders.length} orders, total so far: ${allOrders.length}`);
+      }
+      
+      // Check if there's a next page
+      // Shopify includes Link header info in the response
+      hasNextPage = data.orders && data.orders.length === params.limit;
+      
+      // For safety, limit total pages to prevent infinite loops
+      if (allOrders.length > 10000) {
+        console.warn('Reached maximum order limit of 10000');
+        break;
+      }
+    }
+    
+    return allOrders;
+  }
+  
+  /**
    * Fetch monthly sales data for a specific month and year
    * @param {number} year - The year to fetch data for
    * @param {number} month - The month to fetch data for (1-12)
@@ -119,21 +167,18 @@ class ShopifyService {
       // Create date range for the month
       const { startDate, endDate } = this.getMonthDateRange(year, month);
       
-      // Fetch orders in the date range
-      const data = await this.makeProxyRequest('orders.json', {
-        websiteId,
-        queryParams: {
-          status: 'any',
-          created_at_min: startDate,
-          created_at_max: endDate,
-          limit: 250
-        }
-      });
+      // Fetch all orders with pagination
+      const allOrders = await this.fetchAllOrders({
+        status: 'any',
+        created_at_min: startDate,
+        created_at_max: endDate,
+        limit: 250
+      }, websiteId);
       
-      console.log(`Retrieved ${data?.orders?.length || 0} orders`);
+      console.log(`Retrieved ${allOrders.length} total orders`);
       
       // Check if we have orders
-      if (!data.orders || !data.orders.length) {
+      if (!allOrders || !allOrders.length) {
         console.log('No orders found for this period');
         return {
           sales: 0,
@@ -143,25 +188,30 @@ class ShopifyService {
       
       // Calculate total sales from orders
       let totalSales = 0;
-      data.orders.forEach(order => {
+      let paidOrderCount = 0;
+      
+      allOrders.forEach(order => {
         // Only count completed orders
         if (order.financial_status === 'paid' || order.financial_status === 'partially_paid') {
           totalSales += parseFloat(order.total_price);
+          paidOrderCount++;
         }
       });
       
-      console.log(`Total sales: ${totalSales}, Order count: ${data.orders.length}`);
+      console.log(`Total sales: ${totalSales}, Paid orders: ${paidOrderCount}, Total orders: ${allOrders.length}`);
       
       return {
         sales: totalSales,
-        orderCount: data.orders.length
+        orderCount: allOrders.length,
+        paidOrderCount
       };
     } catch (error) {
       console.error('Error fetching monthly sales:', error);
       // Return zeros instead of failing
       return {
         sales: 0,
-        orderCount: 0
+        orderCount: 0,
+        paidOrderCount: 0
       };
     }
   }
@@ -179,10 +229,22 @@ class ShopifyService {
       
       const salesData = await this.getMonthlySales(year, month, websiteId);
       
-      // Since analytics API returns 403, we'll use estimated metrics based on sales data
-      const users = Math.round(salesData.orderCount * 15); // Estimate 15 users per order
-      const sessionDuration = 120; // Default 120 seconds
-      const bounceRate = 40; // Default 40%
+      // Since we don't have direct analytics access, calculate metrics from order data
+      // More realistic conversion rate: ~2-3% of users make purchases
+      const conversionRate = 0.025; // 2.5% conversion rate (industry average for e-commerce)
+      const users = Math.round(salesData.orderCount / conversionRate);
+      
+      // Session duration varies by engagement - use a range based on order count
+      // More orders typically = better engagement
+      const baseSessionDuration = 90; // Base 90 seconds
+      const engagementMultiplier = Math.min(1.5, 1 + (salesData.orderCount / 100));
+      const sessionDuration = Math.round(baseSessionDuration * engagementMultiplier);
+      
+      // Bounce rate inversely related to sales performance
+      // Better sales = lower bounce rate
+      const baseBounceRate = 65; // E-commerce average ~65%
+      const performanceAdjustment = Math.min(20, salesData.orderCount * 0.5);
+      const bounceRate = Math.max(35, baseBounceRate - performanceAdjustment);
       
       const result = {
         year,
@@ -227,4 +289,5 @@ class ShopifyService {
   }
 }
 
-export default new ShopifyService();
+const shopifyService = new ShopifyService();
+export default shopifyService;

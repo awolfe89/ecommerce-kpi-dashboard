@@ -10,6 +10,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "firebase-admin": "^13.3.0"
+    "firebase-admin": "^13.3.0",
+    "p-limit": "^6.2.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
