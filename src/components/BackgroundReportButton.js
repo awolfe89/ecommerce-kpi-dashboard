@@ -71,6 +71,14 @@ const BackgroundReportButton = ({
       localStorage.setItem('lastReportId', newReportId);
       setReportStatus(result.status);
       
+      // Trigger the processor to start processing immediately
+      try {
+        await aiReportService.triggerProcessor();
+        console.log('Report processor triggered successfully');
+      } catch (processorError) {
+        console.error('Failed to trigger processor, report will be processed on next scheduled run:', processorError);
+      }
+      
       // Start polling for report status
       startPolling(newReportId);
       
@@ -201,11 +209,11 @@ const BackgroundReportButton = ({
   const getStatusMessage = () => {
     switch (reportStatus) {
       case 'pending':
-        return 'Report queued for processing...';
+        return 'Report queued. Processing will begin shortly...';
       case 'processing':
-        return 'Generating report, please wait...';
+        return 'AI is analyzing your data and generating insights...';
       default:
-        return 'Generating report...';
+        return 'Initializing report generation...';
     }
   };
 

@@ -6,7 +6,7 @@ class AIReportService {
     // Base URLs for the Netlify serverless functions
     this.requestUrl = '/.netlify/functions/report-request';
     this.statusUrl = '/.netlify/functions/report-status';
-    this.processorUrl = '/.netlify/functions/report-processor'; // For direct invocation if needed
+    this.processorUrl = '/.netlify/functions/report-processor-trigger'; // Updated to use trigger endpoint
   }
   
   /**
