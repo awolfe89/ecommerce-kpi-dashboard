@@ -1,8 +1,10 @@
 // src/components/ShopifyTestComponent.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { ThemeContext } from '../context/ThemeContext';
 import shopifyService from '../services/shopifyService';
 
 const ShopifyTestComponent = ({ selectedWebsite }) => {
+  const { darkMode } = useContext(ThemeContext);
   const [testStatus, setTestStatus] = useState('pending');
   const [testResult, setTestResult] = useState(null);
   const [shopInfo, setShopInfo] = useState(null);
@@ -92,12 +94,12 @@ const ShopifyTestComponent = ({ selectedWebsite }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow my-4">
-      <h2 className="text-xl font-semibold mb-4">Shopify API Test</h2>
+    <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 rounded-lg shadow my-4`}>
+      <h2 className={`text-xl font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Shopify API Test</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Year</label>
+          <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Year</label>
           <input
             type="number"
             value={lastMonth.year}
@@ -106,7 +108,7 @@ const ShopifyTestComponent = ({ selectedWebsite }) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Month (1-12)</label>
+          <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Month (1-12)</label>
           <input
             type="number"
             min="1"
@@ -142,7 +144,7 @@ const ShopifyTestComponent = ({ selectedWebsite }) => {
       </div>
       
       <div className="mb-4">
-        <div className="text-sm font-medium mb-1">Status:</div>
+        <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status:</div>
         <div className={`text-${testStatus === 'success' ? 'green' : (testStatus === 'error' || testStatus === 'failed' ? 'red' : 'blue')}-600 font-medium`}>
           {testStatus === 'pending' ? 'Not tested yet' : 
            testStatus === 'testing' ? 'Testing...' : 
@@ -154,18 +156,18 @@ const ShopifyTestComponent = ({ selectedWebsite }) => {
       
       {shopInfo && (
         <div className="mb-4">
-          <div className="text-sm font-medium mb-1">Shop Info:</div>
-          <div className="bg-gray-100 p-3 rounded text-xs overflow-auto">
-            <pre>{JSON.stringify(shopInfo, null, 2)}</pre>
+          <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Shop Info:</div>
+          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded text-xs overflow-auto`}>
+            <pre className={darkMode ? 'text-gray-300' : 'text-gray-800'}>{JSON.stringify(shopInfo, null, 2)}</pre>
           </div>
         </div>
       )}
       
       {testResult && (
         <div>
-          <div className="text-sm font-medium mb-1">Result:</div>
-          <div className="bg-gray-100 p-3 rounded text-xs overflow-auto">
-            <pre>{JSON.stringify(testResult, null, 2)}</pre>
+          <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Result:</div>
+          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-3 rounded text-xs overflow-auto`}>
+            <pre className={darkMode ? 'text-gray-300' : 'text-gray-800'}>{JSON.stringify(testResult, null, 2)}</pre>
           </div>
         </div>
       )}
