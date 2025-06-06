@@ -7,6 +7,7 @@ class AIReportService {
     this.requestUrl = '/.netlify/functions/report-request';
     this.statusUrl = '/.netlify/functions/report-status';
     this.processorUrl = '/.netlify/functions/report-processor-trigger'; // Updated to use trigger endpoint
+    this.historyUrl = '/.netlify/functions/report-history';
   }
   
   /**
@@ -100,6 +101,42 @@ class AIReportService {
       return await response.json();
     } catch (error) {
       console.error('Error triggering processor:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Fetch report history for the current user
+   * @param {number} limit - Maximum number of reports to fetch
+   * @param {boolean} includeProcessing - Whether to include processing/pending reports
+   * @returns {Promise<Object>} - The report history
+   */
+  async fetchReportHistory(limit = 10, includeProcessing = false) {
+    try {
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      
+      const params = new URLSearchParams({
+        userId,
+        limit: limit.toString(),
+        includeProcessing: includeProcessing.toString()
+      });
+      
+      const response = await fetch(`${this.historyUrl}?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch report history: ${response.status} - ${errorText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching report history:', error);
       throw error;
     }
   }

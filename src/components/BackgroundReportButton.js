@@ -22,9 +22,62 @@ const BackgroundReportButton = ({
   // Status polling
   const [reportId, setReportId] = useState(null);
   const [reportStatus, setReportStatus] = useState(null);
-  // Remove unused state variable
-  // const [pollingInterval, setPollingInterval] = useState(null);
   const pollingRef = useRef(null);
+  
+  // Report history
+  const [lastCompletedReport, setLastCompletedReport] = useState(null);
+  const [hasCheckedHistory, setHasCheckedHistory] = useState(false);
+  
+  // Check for existing reports on mount
+  useEffect(() => {
+    checkReportHistory();
+  }, [selectedWebsite, selectedYear]); // Re-check when website or year changes
+  
+  // Clean up interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, []);
+  
+  // Check report history to find the most recent completed report
+  const checkReportHistory = async () => {
+    try {
+      const history = await aiReportService.fetchReportHistory(5, true);
+      
+      if (history.mostRecentCompleted) {
+        // Check if this report matches current website/year
+        const reportMatches = 
+          history.mostRecentCompleted.website?.id === selectedWebsite &&
+          history.mostRecentCompleted.timePeriod?.year === selectedYear;
+        
+        if (reportMatches) {
+          setLastCompletedReport(history.mostRecentCompleted);
+        }
+      }
+      
+      // Check if there's any report currently processing
+      const processingReport = history.reports.find(
+        r => (r.status === 'pending' || r.status === 'processing') &&
+             r.website?.id === selectedWebsite &&
+             r.timePeriod?.year === selectedYear
+      );
+      
+      if (processingReport) {
+        setReportId(processingReport.reportId);
+        setReportStatus(processingReport.status);
+        setLoading(true);
+        startPolling(processingReport.reportId);
+      }
+      
+      setHasCheckedHistory(true);
+    } catch (err) {
+      console.error('Error checking report history:', err);
+      setHasCheckedHistory(true);
+    }
+  };
   
   // Prepare data for report generation
   const prepareDataContext = () => {
@@ -58,6 +111,7 @@ const BackgroundReportButton = ({
   const requestReport = async () => {
     setLoading(true);
     setError(null);
+    setLastCompletedReport(null); // Clear any existing completed report
     
     try {
       const dataContext = prepareDataContext();
@@ -68,7 +122,6 @@ const BackgroundReportButton = ({
       // Store the report ID for polling
       const newReportId = result.reportId;
       setReportId(newReportId);
-      localStorage.setItem('lastReportId', newReportId);
       setReportStatus(result.status);
       
       // Trigger the processor to start processing immediately
@@ -111,17 +164,24 @@ const BackgroundReportButton = ({
           setReport(status.report);
           setShowModal(true);
           setLoading(false);
+          setReportId(null);
+          
+          // Update last completed report
+          setLastCompletedReport({
+            reportId: id,
+            report: status.report,
+            completedAt: status.completedAt || new Date().toISOString()
+          });
           
           // Stop polling
           clearInterval(pollingRef.current);
           pollingRef.current = null;
-           // Remove the saved ID so the UI knows there’s nothing left to fetch
-          localStorage.removeItem('lastReportId');
         } 
         // If the report failed, show an error
         else if (status.status === 'failed') {
           setError(`Report generation failed: ${status.error || 'Unknown error'}`);
           setLoading(false);
+          setReportId(null);
           
           // Stop polling
           clearInterval(pollingRef.current);
@@ -137,8 +197,8 @@ const BackgroundReportButton = ({
           if (pollCount === 15) interval = 30000; // 30 seconds
           
           // If we've been polling for too long (over 5 minutes), stop and show an error
-          if (pollCount > 120) {
-            setError('The report is still processing in the background. Check back in a few minutes by refreshing the page.');
+          if (pollCount > 20) {
+            setError('The report is still processing in the background. It will be available when you return.');
             setLoading(false);
             
             // Stop polling
@@ -162,23 +222,6 @@ const BackgroundReportButton = ({
     pollingRef.current = setInterval(poll, interval);
   };
   
-  // Clean up interval on component unmount
-  useEffect(() => {
-    // Check if there's a reportId in localStorage when component mounts
-    const savedReportId = localStorage.getItem('lastReportId');
-    if (savedReportId) {
-      setReportId(savedReportId);
-
-    }
-    
-    // Cleanup function
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
-  }, []);
-  
   // Handle the report generation button click
   const handleGenerateReport = () => {
     if (requirePassword) {
@@ -192,9 +235,18 @@ const BackgroundReportButton = ({
   const verifyPasswordAndGenerate = () => {
     if (passwordInput === reportPassword) {
       setShowPasswordModal(false);
+      setPasswordInput('');
       requestReport();
     } else {
       setError('Incorrect password');
+    }
+  };
+  
+  // Fetch the last completed report
+  const fetchLastReport = () => {
+    if (lastCompletedReport?.report) {
+      setReport(lastCompletedReport.report);
+      setShowModal(true);
     }
   };
   
@@ -216,35 +268,61 @@ const BackgroundReportButton = ({
         return 'Initializing report generation...';
     }
   };
+  
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Don't render anything until we've checked history
+  if (!hasCheckedHistory) {
+    return <div className="text-gray-500">Loading report status...</div>;
+  }
 
   return (
     <>
-      <button
-        onClick={handleGenerateReport}
-        disabled={loading}
-        className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
-      >
-        {loading ? getStatusMessage() : 'Generate Performance Report'}
-      </button>
-      {!loading && !showModal && reportId && (
-       <button
-         onClick={() => startPolling(reportId)}
-         className="ml-2 px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-       >
-         Fetch Last Report
-       </button>
-     )}
-     {reportStatus && !loading && !showModal && (
-  <div className="mt-2 text-sm text-gray-700">
-    {reportStatus === 'completed'
-      ? '✅ Report is ready—click “Fetch Last Report” to view.'
-      : reportStatus === 'failed'
-        ? '⚠️ Report failed. Try again later.'
-        : getStatusMessage()}
-  </div>
-)}
-
-      {reportId && <div className="hidden">{/* Using reportId: {reportId} */}</div>}
+      <div className="flex items-center gap-2">
+        {/* Main Generate Report Button */}
+        {!loading && (
+          <button
+            onClick={handleGenerateReport}
+            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            Generate Performance Report
+          </button>
+        )}
+        
+        {/* Status while processing */}
+        {loading && (
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <span className="text-gray-700 dark:text-gray-300">{getStatusMessage()}</span>
+          </div>
+        )}
+        
+        {/* Fetch Last Report button - only show when there's a completed report and not currently processing */}
+        {!loading && lastCompletedReport && !showModal && (
+          <button
+            onClick={fetchLastReport}
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            View Last Report
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              ({formatDate(lastCompletedReport.completedAt)})
+            </span>
+          </button>
+        )}
+      </div>
+      
+      {/* Error display */}
       {error && (
         <div className="mt-2 text-red-600 text-sm">{error}</div>
       )}
@@ -266,6 +344,7 @@ const BackgroundReportButton = ({
                   verifyPasswordAndGenerate();
                 }
               }}
+              autoFocus
             />
             
             {error && (
@@ -276,9 +355,10 @@ const BackgroundReportButton = ({
               <button
                 onClick={() => {
                   setShowPasswordModal(false);
+                  setPasswordInput('');
                   setError(null);
                 }}
-                className="px-4 py-2 border rounded-md"
+                className="px-4 py-2 border rounded-md dark:border-gray-600"
               >
                 Cancel
               </button>
@@ -325,7 +405,7 @@ const BackgroundReportButton = ({
             )}
             
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-              Report generated at {new Date(report.generatedAt).toLocaleString()}
+              Report generated at {formatDate(report.generatedAt)}
             </div>
           </div>
           
