@@ -34,16 +34,19 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
   external_node_modules = ["firebase-admin", "openai"]
-  
-# Increase timeout for report generation functions
-[[functions]]
-  path = "report-processor"
+
+# Individual function configurations
+[functions."report-processor"]
   timeout = 60
-  
-[[functions]]
-  path = "report-processor-trigger"
+
+[functions."report-processor-trigger"]
   timeout = 60
-  
-[[functions]]
-  path = "ai-report"
+
+[functions."ai-report"]
+  timeout = 60
+
+[functions."report-request"]
+  timeout = 60
+
+[functions."report-status"]
   timeout = 60
