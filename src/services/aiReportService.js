@@ -7,6 +7,7 @@ class AIReportService {
     this.requestUrl = '/.netlify/functions/report-request';
     this.statusUrl = '/.netlify/functions/report-status';
     this.processorUrl = '/.netlify/functions/report-processor-trigger'; // Updated to use trigger endpoint
+    this.processNowUrl = '/.netlify/functions/process-now';
     this.historyUrl = '/.netlify/functions/report-history';
   }
   
@@ -73,6 +74,38 @@ class AIReportService {
     }
   }
   
+  /**
+   * Process a specific report immediately
+   * @param {string} reportId - The ID of the report to process
+   * @returns {Promise<Object>} - The processor response
+   */
+  async processReportNow(reportId) {
+    try {
+      const token = await this.getAuthToken();
+      
+      const response = await fetch(this.processNowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reportId
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to process report: ${response.status} - ${errorText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error processing report:', error);
+      throw error;
+    }
+  }
+
   /**
    * Trigger the report processor manually if needed
    * Normally, this would be triggered by a scheduled event

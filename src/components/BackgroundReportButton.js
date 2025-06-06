@@ -124,12 +124,12 @@ const BackgroundReportButton = ({
       setReportId(newReportId);
       setReportStatus(result.status);
       
-      // Trigger the processor to start processing immediately
+      // Try to process the report immediately
       try {
-        await aiReportService.triggerProcessor();
-        console.log('Report processor triggered successfully');
+        await aiReportService.processReportNow(newReportId);
+        console.log('Report processing started immediately');
       } catch (processorError) {
-        console.error('Failed to trigger processor, report will be processed on next scheduled run:', processorError);
+        console.log('Immediate processing failed, will be processed by scheduled function:', processorError.message);
       }
       
       // Start polling for report status

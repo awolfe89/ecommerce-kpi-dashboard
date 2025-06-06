@@ -1,8 +1,6 @@
 // netlify/functions/report-processor-trigger.js
-// This function manually triggers the report processor
-// It's a wrapper that calls the main processor function
-
-const reportProcessor = require('./report-processor');
+// This function provides a quick response that report processing has been triggered
+// The actual processing happens via scheduled functions or manual runs
 
 exports.handler = async (event, context) => {
   // Only allow POST requests
@@ -28,25 +26,18 @@ exports.handler = async (event, context) => {
 
   console.log('Manual trigger received for report processor');
 
-  try {
-    // Call the main report processor
-    const result = await reportProcessor.handler(event, context);
-    
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: 'Report processor triggered successfully',
-        processorResult: JSON.parse(result.body)
-      })
-    };
-  } catch (error) {
-    console.error('Error triggering report processor:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        error: 'Failed to trigger report processor',
-        details: error.message 
-      })
-    };
-  }
+  // Simply return success immediately
+  // The actual processing will happen through:
+  // 1. Scheduled function runs (if configured)
+  // 2. Manual triggering of the report-processor function
+  // 3. Or the polling mechanism will pick up the report when ready
+  
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      message: 'Report processing triggered',
+      status: 'accepted',
+      note: 'Report will be processed in the background'
+    })
+  };
 };

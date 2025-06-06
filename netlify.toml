@@ -50,3 +50,10 @@
 
 [functions."report-status"]
   timeout = 60
+
+# Scheduled function to process reports every 5 minutes
+[functions."report-processor"]
+  schedule = "*/5 * * * *"
+
+[functions."process-now"]
+  timeout = 60
